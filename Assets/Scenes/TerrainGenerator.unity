@@ -802,8 +802,8 @@ Camera:
   m_GameObject: {fileID: 963194225}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 1
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_ClearFlags: 2
+  m_BackGroundColor: {r: 0.28813636, g: 0.30916256, b: 0.3301887, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -826,7 +826,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 45.1
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -974,8 +974,6 @@ MonoBehaviour:
   height: 256
   scale: 20
   waitSlider: {fileID: 1725474404}
-  mesh: {fileID: 0}
-  rend: {fileID: 0}
   rawImage: {fileID: 1182380906}
   seed: 0
   randomSeed: 1
