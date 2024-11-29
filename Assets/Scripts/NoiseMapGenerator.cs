@@ -9,17 +9,22 @@ public class NoiseMapGenerator : MonoBehaviour
     public int height = 256;
 
     [Header("Controls Scale of Noise")]
-    public float scale = 20.0f;
+    private float scale = 20.0f;
 
     [Header("Slider for Regeneration Wait")]
     [SerializeField] private Slider waitSlider;
+
+    [Header("Slider for Noise Scale")]
+    [SerializeField] private Slider scaleSlider;
 
     [Header("Image to Show Noise")]
     [SerializeField] private RawImage rawImage; // UI element to show the noise
 
     [Header("Seed for Noise")]
-    public int seed; // seed for randomization
-    public bool randomSeed = true; // use a random seed or not
+    [SerializeField] private int seed; // seed for randomization
+    [SerializeField] private bool randomSeed = true; // use a random seed or not
+    [SerializeField] private Toggle randomSeedToggle;
+    [SerializeField] private InputField seedInput;
 
     private Mesh mesh; // Mesh to display the noise
     private MeshRenderer rend; // Renderer to display the noise
@@ -32,21 +37,41 @@ public class NoiseMapGenerator : MonoBehaviour
     [Range(0, 1)] public float persistence = 0.5f; // How much each octave contributes
     public float lacunarity = 2.0f; // How much the frequency increases for each octave
 
-    // Perlin Noise - Gradient table
-    private static int[] permutationTable = new int[512];
-
     private void Start()
     {
         // Create a new mesh and set the mesh filter
         mesh = new Mesh();
         GetComponent<MeshFilter>().mesh = mesh;
-
+        SetupSliders(); // Setup the sliders
         SetupRegenerate(); // Generate the noise map
+
+        randomSeedToggle.isOn = randomSeed;
+        randomSeedToggle.onValueChanged.AddListener((value) => randomSeed = value);
     }
 
     private void Update()
     {
         UpdateMesh(); // Update the mesh
+    }
+
+    private void SetupSliders()
+    {
+        ScaleSliderSetup();
+        WaitSliderSetup();
+    }
+
+    private void WaitSliderSetup()
+    {
+        waitSlider.maxValue = 2f;
+        waitSlider.minValue = 0.1f;
+        waitSlider.value = 0.6f;
+    }
+
+    private void ScaleSliderSetup()
+    {
+        scaleSlider.maxValue = 100f;
+        scaleSlider.minValue = 1f;
+        scaleSlider.value = scale;
     }
 
     private void UpdateMesh()
@@ -65,9 +90,16 @@ public class NoiseMapGenerator : MonoBehaviour
         StopAllCoroutines(); // stops any existing coroutine
 
         if (randomSeed)
-            seed = Random.Range(0, 10000); // generate a random seed
+        {
+            if(seedInput.text != "")
+                seed = int.Parse(seedInput.text); // use the seed from the input field
+            else
+            {
+                seed = Random.Range(0, 10000); // generate a random seed
+                seedInput.placeholder.GetComponent<Text>().text = seed.ToString();
+            }
+        }
 
-        InitializePermutationTable();
 
         // texture based on Perlin noise
         Texture2D texture = GenerateTexture();
@@ -91,11 +123,13 @@ public class NoiseMapGenerator : MonoBehaviour
             for (int x = 0; x < width; x++)
             {
                 // normalize the coordinates based on the scale
-                float xCoord = x / scale;
-                float yCoord = y / scale;
+                float xCoord = x / scaleSlider.value;
+                float yCoord = y / scaleSlider.value;
                 float noise = GenerateOctaveNoise(xCoord, yCoord);
 
-                texture.SetPixel(x, y, new Color(noise, noise, noise));
+                float normalizedNoise = (noise + 1f) / 2f; // Normalize to [0, 1] (0-255 for color)
+
+                texture.SetPixel(x, y, new Color(normalizedNoise, normalizedNoise, normalizedNoise));
             }
         }
 
@@ -113,8 +147,11 @@ public class NoiseMapGenerator : MonoBehaviour
 
         for (int i = 0; i < octaves; i++)
         {
-            // Use custom Perlin noise for each octave
-            total += PerlinNoise(x * frequency, y * frequency) * amplitude;
+            float sampleX = x * frequency;  // Adjust x coordinate based on frequency
+            float sampleY = y * frequency;  // Adjust y coordinate based on frequency
+            // Use Perlin noise for each octave
+            float perlinValue = Mathf.PerlinNoise(sampleX + seed, sampleY + seed); // Add seed for randomness
+            total += perlinValue * amplitude;
 
             // Update frequency and amplitude
             maxValue += amplitude;
@@ -122,87 +159,8 @@ public class NoiseMapGenerator : MonoBehaviour
             frequency *= lacunarity;
         }
 
-        // Normalize the result to a value between 0 and 1
-        return total / maxValue;
-    }
-
-    // Custom Perlin noise function (2D)
-    private float PerlinNoise(float x, float y)
-    {
-        int X = Mathf.FloorToInt(x) & 255; // Integer part of x, modulo 256
-        int Y = Mathf.FloorToInt(y) & 255; // Integer part of y, modulo 256
-        int X2 = (X + 1) & 255;            // X+1, wrapped to 0-255
-        int Y2 = (Y + 1) & 255;            // Y+1, wrapped to 0-255
-
-        float xf = x - Mathf.Floor(x);    // Fractional part of x
-        float yf = y - Mathf.Floor(y);    // Fractional part of y
-
-        // Fade curves for smooth interpolation
-        float u = Fade(xf);
-        float v = Fade(yf);
-
-        // Hash coordinates
-        int aa = permutationTable[X] + Y;
-        int ab = permutationTable[X] + Y2;
-        int ba = permutationTable[X2] + Y;
-        int bb = permutationTable[X2] + Y2;
-
-        // Interpolate
-        float gradAA = Grad(permutationTable[aa], xf, yf);
-        float gradAB = Grad(permutationTable[ab], xf, yf - 1);
-        float gradBA = Grad(permutationTable[ba], xf - 1, yf);
-        float gradBB = Grad(permutationTable[bb], xf - 1, yf - 1);
-
-        // Interpolate the results
-        float lerpX1 = Lerp(gradAA, gradBA, u);
-        float lerpX2 = Lerp(gradAB, gradBB, u);
-        return Lerp(lerpX1, lerpX2, v);
-    }
-
-    // Fade function (for smooth transitions)
-    private float Fade(float t)
-    {
-        return t * t * t * (t * (t * 6 - 15) + 10);
-    }
-
-    // Linear interpolation function
-    private float Lerp(float a, float b, float t)
-    {
-        return a + t * (b - a);
-    }
-
-    // Gradient function to calculate the dot product
-    private float Grad(int hash, float x, float y)
-    {
-        int h = hash & 15; // Get the last 4 bits
-        float u = h < 8 ? x : y; // Select X or Y based on the hash value
-        float v = h < 4 ? y : (h == 12 || h == 14 ? x : 0); // Select Y or 0
-        return ((h & 1) == 0 ? 1 : -1) * (u + v); // Apply gradient correctly
-    }
-
-
-    // Initialize the permutation table (for randomness)
-    private void InitializePermutationTable()
-    {
-        for (int i = 0; i < 256; i++)
-        {
-            permutationTable[i] = i;
-        }
-
-        // Shuffle the permutation table
-        for (int i = 0; i < 256; i++)
-        {
-            int j = Random.Range(0, 256);
-            int temp = permutationTable[i];
-            permutationTable[i] = permutationTable[j];
-            permutationTable[j] = temp;
-        }
-
-        // Copy the permutation table to the second half
-        for (int i = 0; i < 256; i++)
-        {
-            permutationTable[i + 256] = permutationTable[i];
-        }
+        // Normalize to [-1, 1]
+        return (total / maxValue) * 2f - 1f;
     }
 
     private IEnumerator CreateMesh()
@@ -216,8 +174,8 @@ public class NoiseMapGenerator : MonoBehaviour
             for (int x = 0; x <= width; x++)
             {
                 // Apply height based on Perlin noise with octaves
-                float sampleX = x / scale;
-                float sampleY = y / scale;
+                float sampleX = x / scaleSlider.value;
+                float sampleY = y / scaleSlider.value;
                 float heightValue = GenerateOctaveNoise(sampleX, sampleY);
 
                 // Apply heightValue to the Y position of the vertex
