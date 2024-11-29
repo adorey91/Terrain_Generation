@@ -1,12 +1,13 @@
 using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class NoiseMapGenerator : MonoBehaviour
 {
     [Header("Size of Grid")]
-    public int width = 256;
-    public int height = 256;
+    public int xSize = 256;
+    public int zSize = 256;
 
     [Header("Controls Scale of Noise")]
     private float scale = 20.0f;
@@ -37,6 +38,8 @@ public class NoiseMapGenerator : MonoBehaviour
     [Range(0, 1)] public float persistence = 0.5f; // How much each octave contributes
     public float lacunarity = 2.0f; // How much the frequency increases for each octave
 
+    private float xCenter;
+    private float zCenter;
 
     private void Start()
     {
@@ -116,22 +119,26 @@ public class NoiseMapGenerator : MonoBehaviour
 
     private Texture2D GenerateTexture()
     {
-        Texture2D texture = new Texture2D(width, height);
+        Texture2D texture = new Texture2D(xSize, zSize);
         texture.filterMode = FilterMode.Point;
         texture.wrapMode = TextureWrapMode.Clamp;
 
-        for (int y = 0; y < height; y++)
+        // calculate center of the texture
+        xCenter = xSize / 2;
+        float zCenter = zSize / 2;
+
+        for (int z = 0; z < zSize; z++)
         {
-            for (int x = 0; x < width; x++)
+            for (int x = 0; x < xSize; x++)
             {
                 // normalize the coordinates based on the scale
-                float xCoord = x / scaleSlider.value;
-                float yCoord = y / scaleSlider.value;
-                float noise = GenerateOctaveNoise(xCoord, yCoord);
+                float xCoord = (x - xCenter) / scaleSlider.value;
+                float zCoord = (z - zCenter) / scaleSlider.value;
+                float noise = GenerateOctaveNoise(xCoord, zCoord);
 
                 float normalizedNoise = (noise + 1f) / 2f; // Normalize to [0, 1] (0-255 for color)
 
-                texture.SetPixel(x, y, new Color(normalizedNoise, normalizedNoise, normalizedNoise));
+                texture.SetPixel(x, z, new Color(normalizedNoise, normalizedNoise, normalizedNoise));
             }
         }
 
@@ -140,7 +147,7 @@ public class NoiseMapGenerator : MonoBehaviour
     }
 
     // Generate Perlin noise with multiple octaves
-    private float GenerateOctaveNoise(float x, float y)
+    private float GenerateOctaveNoise(float x, float z)
     {
         float total = 0f;
         float frequency = 1f;
@@ -150,10 +157,10 @@ public class NoiseMapGenerator : MonoBehaviour
         for (int i = 0; i < octaves; i++)
         {
             float sampleX = x * frequency;  // Adjust x coordinate based on frequency
-            float sampleY = y * frequency;  // Adjust y coordinate based on frequency
+            float sampleZ = z * frequency;  // Adjust z coordinate based on frequency
 
             // Use Perlin noise for each octave using seed for random
-            float perlinValue = Mathf.PerlinNoise(sampleX + seed, sampleY + seed);
+            float perlinValue = Mathf.PerlinNoise(sampleX + seed, sampleZ + seed);
             total += perlinValue * amplitude;
 
             // Update frequency and amplitude
@@ -169,41 +176,41 @@ public class NoiseMapGenerator : MonoBehaviour
     private IEnumerator CreateMesh()
     {
         // Create a grid of vertices
-        vertices = new Vector3[(width + 1) * (height + 1)];
+        vertices = new Vector3[(xSize + 1) * (zSize + 1)];
 
         // Populate the vertices and UVs
-        for (int i = 0, y = 0; y <= height; y++)
+        for (int i = 0, z = 0; z <= zSize; z++)
         {
-            for (int x = 0; x <= width; x++)
+            for (int x = 0; x <= xSize; x++)
             {
-                // Apply height based on Perlin noise with octaves
-                float sampleX = x / scaleSlider.value;
-                float sampleY = y / scaleSlider.value;
-                float heightValue = GenerateOctaveNoise(sampleX, sampleY);
+                // Apply zSize based on Perlin noise with octaves
+                float sampleX = (x - xCenter) / scaleSlider.value;
+                float sampleZ = (z - zCenter) / scaleSlider.value;
+                float heightValue = GenerateOctaveNoise(sampleX, sampleZ);
 
                 // Apply heightValue to the Y position of the vertex
-                vertices[i] = new Vector3(x, heightValue * 10f, y); // Scale height for better visibility
+                vertices[i] = new Vector3(x, heightValue * 10f, z); // Scale zSize for better visibility
                 i++;
             }
         }
 
 
         // Create triangles (quad grid)
-        triangles = new int[width * height * 6];
+        triangles = new int[xSize * zSize * 6];
         int triIndex = 0;
         int vertIndex = 0;
 
-        for (int y = 0; y < height; y++)
+        for (int y = 0; y < zSize; y++)
         {
-            for (int x = 0; x < width; x++)
+            for (int x = 0; x < xSize; x++)
             {
                 // Two triangles per quad
                 triangles[triIndex + 0] = vertIndex + 0;
-                triangles[triIndex + 1] = vertIndex + width + 1;
+                triangles[triIndex + 1] = vertIndex + xSize + 1;
                 triangles[triIndex + 2] = vertIndex + 1;
                 triangles[triIndex + 3] = vertIndex + 1;
-                triangles[triIndex + 4] = vertIndex + width + 1;
-                triangles[triIndex + 5] = vertIndex + width + 2;
+                triangles[triIndex + 4] = vertIndex + xSize + 1;
+                triangles[triIndex + 5] = vertIndex + xSize + 2;
 
                 vertIndex++;
                 triIndex += 6;

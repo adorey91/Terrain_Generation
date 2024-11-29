@@ -13,9 +13,9 @@ public class CameraRotation : MonoBehaviour
         // Get the center of the grid (center of the noise map generator)
         Vector3 gridCenter = GetGridCenter();
 
-        // Get the outer boundary of the grid (half of width and height)
-        float gridWidth = noiseMapGenerator.width;
-        float gridHeight = noiseMapGenerator.height;
+        // Get the outer boundary of the grid (half of xSize and zSize)
+        float gridWidth = noiseMapGenerator.xSize;
+        float gridHeight = noiseMapGenerator.zSize;
 
         // Calculate the maximum distance to the edge of the grid (we'll use the furthest point, which is the diagonal)
         float distance = Mathf.Sqrt(Mathf.Pow(gridWidth / 2f, 2) + Mathf.Pow(gridHeight / 2f, 2));
@@ -27,7 +27,7 @@ public class CameraRotation : MonoBehaviour
         float xPos = gridCenter.x + Mathf.Cos(currentAngle * Mathf.Deg2Rad) * distance;  // X position on the circle
         float zPos = gridCenter.z + Mathf.Sin(currentAngle * Mathf.Deg2Rad) * distance;  // Z position on the circle
 
-        // Set the camera's position, with a fixed height above the grid
+        // Set the camera's position, with a fixed zSize above the grid
         transform.position = new Vector3(xPos, gridCenter.y + cameraHeight, zPos);
 
         // Always look at the center of the grid
@@ -37,9 +37,9 @@ public class CameraRotation : MonoBehaviour
     // This method calculates the center of the grid based on the dimensions of the generated mesh
     private Vector3 GetGridCenter()
     {
-        // Get the center position based on the noise map generator's width and height
-        float centerX = (float)noiseMapGenerator.width / 2f;
-        float centerY = (float)noiseMapGenerator.height / 2f;
+        // Get the center position based on the noise map generator's xSize and zSize
+        float centerX = (float)noiseMapGenerator.xSize / 2f;
+        float centerY = (float)noiseMapGenerator.zSize / 2f;
 
         // Return the center position of the grid on the X-Z plane (Y will be handled by cameraHeight)
         return new Vector3(centerX, 0, centerY);
