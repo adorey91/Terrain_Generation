@@ -37,6 +37,7 @@ public class NoiseMapGenerator : MonoBehaviour
     [Range(0, 1)] public float persistence = 0.5f; // How much each octave contributes
     public float lacunarity = 2.0f; // How much the frequency increases for each octave
 
+
     private void Start()
     {
         // Create a new mesh and set the mesh filter
@@ -60,6 +61,7 @@ public class NoiseMapGenerator : MonoBehaviour
         WaitSliderSetup();
     }
 
+    // Setup the wait slider
     private void WaitSliderSetup()
     {
         waitSlider.maxValue = 2f;
@@ -67,6 +69,7 @@ public class NoiseMapGenerator : MonoBehaviour
         waitSlider.value = 0.6f;
     }
 
+    // Setup the scale slider
     private void ScaleSliderSetup()
     {
         scaleSlider.maxValue = 100f;
@@ -99,7 +102,6 @@ public class NoiseMapGenerator : MonoBehaviour
                 seedInput.placeholder.GetComponent<Text>().text = seed.ToString();
             }
         }
-
 
         // texture based on Perlin noise
         Texture2D texture = GenerateTexture();
@@ -149,8 +151,9 @@ public class NoiseMapGenerator : MonoBehaviour
         {
             float sampleX = x * frequency;  // Adjust x coordinate based on frequency
             float sampleY = y * frequency;  // Adjust y coordinate based on frequency
-            // Use Perlin noise for each octave
-            float perlinValue = Mathf.PerlinNoise(sampleX + seed, sampleY + seed); // Add seed for randomness
+
+            // Use Perlin noise for each octave using seed for random
+            float perlinValue = Mathf.PerlinNoise(sampleX + seed, sampleY + seed);
             total += perlinValue * amplitude;
 
             // Update frequency and amplitude
